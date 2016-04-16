@@ -238,7 +238,7 @@ class Torrent():
         except Exception as e:
             self.notice_text.insert(INSERT, e)
 
-    def get_notice():
+    def get_notice(self):
         url = "http://jinsyu.com/python/pyto/notice"
         notice_text = urlopen(url).read().decode('utf-8')
         return notice_text
