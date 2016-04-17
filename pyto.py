@@ -3,7 +3,7 @@ from urllib.request import urlopen, Request, quote
 from bs4 import BeautifulSoup
 from tkinter import *
 from tkinter import ttk
-import requests, threading
+import requests, threading, re
 
 DIC_CATEGORY = {
     "torrent_variety": "예능",
@@ -72,19 +72,39 @@ class Torrent():
         # button frame / search button
         self.search_button = Button(self.button_frame, text="Search torrent", command=self.search_torrent)
         self.search_button.pack(side=LEFT)
-
+        
         # button frame / quit button
         self.quit_button = Button(self.button_frame, text="Exit", command=root.quit)
         self.quit_button.pack(side=LEFT)
-        # root.bind('<Control-Key-x>', exit)
+        root.bind('<Control-Key-x>', exit)
+
+        # hot_button_frame
+        self.hot_button_frame = Frame(self.root)
+        self.hot_button_frame.grid(row=2, sticky=W + E)
+
+        # button frame / best 100 button
+        self.hot_label = Label(self.hot_button_frame, text="HOT10")
+        self.hot_label.pack(side=LEFT)
+        self.hot_movie_button = Button(self.hot_button_frame, text="인기영화", command=lambda: self.get_hot('torrent_movie'))
+        self.hot_movie_button.pack(side=LEFT)
+        self.hot_variety_button = Button(self.hot_button_frame, text="인기예능", command=lambda: self.get_hot('torrent_variety'))
+        self.hot_variety_button.pack(side=LEFT)
+        self.hot_drama_button = Button(self.hot_button_frame, text="드라마", command=lambda: self.get_hot('torrent_tv'))
+        self.hot_drama_button.pack(side=LEFT)
+        self.hot_docu_button = Button(self.hot_button_frame, text="다큐", command=lambda: self.get_hot('torrent_docu'))
+        self.hot_docu_button.pack(side=LEFT)
+        self.hot_mid_button = Button(self.hot_button_frame, text="미드", command=lambda: self.get_hot('torrent_mid'))
+        self.hot_mid_button.pack(side=LEFT)
+        self.hot_ani_button = Button(self.hot_button_frame, text="애니", command=lambda: self.get_hot('torrent_ani'))
+        self.hot_ani_button.pack(side=LEFT)
 
         # progressbar
         self.progressbar = ttk.Progressbar(orient=HORIZONTAL, length=200, mode='determinate')
-        self.progressbar.grid(row=2, sticky=W + E + N + S)
+        self.progressbar.grid(row=3, sticky=W + E + N + S)
 
         # torrent_lists_frame
-        self.torrent_lists_frame = Frame(root, height=100)
-        self.torrent_lists_frame.grid(row=3, sticky=W + E + N + S)
+        self.torrent_lists_frame = Frame(self.root, height=100)
+        self.torrent_lists_frame.grid(row=4, sticky=W + E + N + S)
 
         # torrent_lists_frame / torrent lists tree
         self.torrent_lists_tree = ttk.Treeview(self.torrent_lists_frame, height=100)
@@ -114,17 +134,42 @@ class Torrent():
         Grid.columnconfigure(root, 0, weight=1)
         Grid.columnconfigure(self.button_frame, 1, weight=1)
         Grid.columnconfigure(self.torrent_lists_frame, 2, weight=1)
-
+    
+    # insert hot article lists
+    def get_hot(self, board_name):
+        self.delete_torrent_lists_tree()
+        self.setprogress(0)
+        soup = souping("https://torrentkim3.net/bbs/popular.html")
+        self.setprogress(30)
+        lists = soup.findAll('a')
+        hot_lists = []
+        for li in lists:
+            if li.get('href') and '/'+board_name+'/' in li.get('href'):
+                if board_name in DIC_CATEGORY:
+                    category_kor = DIC_CATEGORY[board_name]
+                    bbs_name = li.get_text().strip()
+                    bbs_link = li.get('href').replace('..', '')
+                    hot_lists.append({'category_kor': category_kor, 'bbs_name': bbs_name, 'bbs_link': bbs_link})
+        
+        for index, hot_list in enumerate(hot_lists):
+            self.torrent_lists_tree.insert("", 'end', hot_list['bbs_link'], values=('HOT10', 
+                                                                        hot_list['category_kor'], 
+                                                                        hot_list['bbs_name'], 
+                                                                        hot_list['bbs_link']))
+            self.setprogress(50 + index*50/10)
+        self.setprogress(100)    
     def exit(self, event=0):
         self.root.quit()
 
     def setprogress(self, progress):
         self.progressbar["value"] = progress
-
-    def search_torrent(self, event=0):
+    
+    def delete_torrent_lists_tree(self):
         for item in self.torrent_lists_tree.get_children():
             self.torrent_lists_tree.delete(item)
-
+    
+    def search_torrent(self, event=0):
+        self.delete_torrent_lists_tree()
         search_text = self.search_entry.get()
         search_text = search_text.strip()
         if len(search_text) > 1:
@@ -238,7 +283,7 @@ class Torrent():
         except Exception as e:
             self.notice_text.insert(INSERT, e)
 
-    def get_notice():
+    def get_notice(self):
         url = "http://jinsyu.com/python/pyto/notice"
         notice_text = urlopen(url).read().decode('utf-8')
         return notice_text
