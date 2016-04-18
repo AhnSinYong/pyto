@@ -290,7 +290,7 @@ class Torrent():
                 threading.Thread(target=self.reset_progress).start()
 
         except Exception as e:
-            self.notice_text.insert(END, e)
+            self.notice_text.insert(END, e + "\n")
             self.notice_text.see("end")
 
     def get_notice(self):
