@@ -2,8 +2,8 @@
 from urllib.request import urlopen, Request, quote
 from bs4 import BeautifulSoup
 from tkinter import *
-from tkinter import ttk
-import requests, threading, re
+from tkinter.ttk import *
+import requests, threading, re, time
 
 DIC_CATEGORY = {
     "torrent_variety": "예능",
@@ -46,26 +46,27 @@ class Torrent():
 
         # notice frame / notice text
         self.notice_text = Text(self.notice_frame, height=6)
-        ysb_notice_text = ttk.Scrollbar(self.notice_frame, orient='vertical', command=self.notice_text.yview)
+        ysb_notice_text = Scrollbar(self.notice_frame, orient='vertical', command=self.notice_text.yview)
         self.notice_text.configure(yscroll=ysb_notice_text.set)
 
-        self.notice_text.pack(side=LEFT, fill=BOTH, expand=YES)
-        ysb_notice_text.pack(side=LEFT, fill=Y)
+        ysb_notice_text.pack(side=RIGHT, fill=Y)
+        self.notice_text.pack(side=LEFT, fill=BOTH, expand=1)
 
         # get notice text from jinsyu.com
-        self.notice_text.insert(INSERT, self.get_notice())
+        self.notice_text.insert(END, self.get_notice()+'\n')
+        self.notice_text.see("end")
 
         # button frame
         self.button_frame = Frame(self.root)
         self.button_frame.grid(row=1, sticky=W + E)
 
         # button frame / 검색어 button label
-        self.search_label = Label(self.button_frame, text="검색어")
-        self.search_label.pack(side=LEFT)
+        self.search_label = Label(self.button_frame, text="검색어", width=6)
+        self.search_label.pack(side=LEFT, padx=(4,0))
 
         # button frame / search text input entry
         self.search_entry = Entry(self.button_frame)
-        self.search_entry.pack(side=LEFT, fill=X, expand=1)
+        self.search_entry.pack(side=LEFT, fill=X, expand=1, padx=(2,2))
         self.search_entry.bind('<Return>', self.search_torrent)
         self.search_entry.focus_set()
 
@@ -74,41 +75,37 @@ class Torrent():
         self.search_button.pack(side=LEFT)
         
         # button frame / quit button
-        self.quit_button = Button(self.button_frame, text="Exit", command=root.quit)
+        self.quit_button = Button(self.button_frame, text="Exit", command=root.destroy)
         self.quit_button.pack(side=LEFT)
-        root.bind('<Control-Key-x>', exit)
+        root.bind('<Control-Key-x>', lambda e: root.destroy())
 
         # hot_button_frame
         self.hot_button_frame = Frame(self.root)
         self.hot_button_frame.grid(row=2, sticky=W + E)
 
         # button frame / best 100 button
-        self.hot_label = Label(self.hot_button_frame, text="HOT10")
-        self.hot_label.pack(side=LEFT)
+        self.hot_label = Label(self.hot_button_frame, text="HOT10", width=6)
+        self.hot_label.pack(side=LEFT, padx=(5,0))
         self.hot_movie_button = Button(self.hot_button_frame, text="인기영화", command=lambda: self.get_hot('torrent_movie'))
-        self.hot_movie_button.pack(side=LEFT)
+        self.hot_movie_button.pack(side=LEFT, fill=X, expand=1)
         self.hot_variety_button = Button(self.hot_button_frame, text="인기예능", command=lambda: self.get_hot('torrent_variety'))
-        self.hot_variety_button.pack(side=LEFT)
+        self.hot_variety_button.pack(side=LEFT, fill=X, expand=1)
         self.hot_drama_button = Button(self.hot_button_frame, text="드라마", command=lambda: self.get_hot('torrent_tv'))
-        self.hot_drama_button.pack(side=LEFT)
+        self.hot_drama_button.pack(side=LEFT, fill=X, expand=1)
         self.hot_docu_button = Button(self.hot_button_frame, text="다큐", command=lambda: self.get_hot('torrent_docu'))
-        self.hot_docu_button.pack(side=LEFT)
+        self.hot_docu_button.pack(side=LEFT, fill=X, expand=1)
         self.hot_mid_button = Button(self.hot_button_frame, text="미드", command=lambda: self.get_hot('torrent_mid'))
-        self.hot_mid_button.pack(side=LEFT)
+        self.hot_mid_button.pack(side=LEFT, fill=X, expand=1)
         self.hot_ani_button = Button(self.hot_button_frame, text="애니", command=lambda: self.get_hot('torrent_ani'))
-        self.hot_ani_button.pack(side=LEFT)
-
-        # progressbar
-        self.progressbar = ttk.Progressbar(orient=HORIZONTAL, length=200, mode='determinate')
-        self.progressbar.grid(row=3, sticky=W + E + N + S)
+        self.hot_ani_button.pack(side=LEFT, fill=X, expand=1)
 
         # torrent_lists_frame
-        self.torrent_lists_frame = Frame(self.root, height=100)
-        self.torrent_lists_frame.grid(row=4, sticky=W + E + N + S)
+        self.torrent_lists_frame = Frame(self.root)
+        self.torrent_lists_frame.grid(row=3, sticky=W + E + N + S)
 
         # torrent_lists_frame / torrent lists tree
-        self.torrent_lists_tree = ttk.Treeview(self.torrent_lists_frame, height=100)
-        self.ysb_torrent_lists_tree = ttk.Scrollbar(self.torrent_lists_frame, orient='vertical',
+        self.torrent_lists_tree = Treeview(self.torrent_lists_frame)
+        self.ysb_torrent_lists_tree = Scrollbar(self.torrent_lists_frame, orient='vertical',
                                                     command=self.torrent_lists_tree.yview)
         self.torrent_lists_tree.configure(yscroll=self.ysb_torrent_lists_tree.set)
 
@@ -127,13 +124,20 @@ class Torrent():
         self.torrent_lists_tree.column("#4", width=0, stretch=0, minwidth=0)
 
         self.torrent_lists_tree.bind("<Double-1>", self.asyncdownload)
-        self.torrent_lists_tree.pack(side=LEFT, fill=BOTH, expand=YES)
-        self.ysb_torrent_lists_tree.pack(side=LEFT, fill=Y)
+        self.ysb_torrent_lists_tree.pack(side=RIGHT, fill=Y)
+        self.torrent_lists_tree.pack(side=LEFT, fill=BOTH, expand=1)
 
+        # progressbar
+        self.progressbar = Progressbar(orient=HORIZONTAL, length=200, mode='determinate')
+        self.progressbar.grid(row=4, sticky=W + E + N + S)
+        
         # grid setting to expand
         Grid.columnconfigure(root, 0, weight=1)
-        Grid.columnconfigure(self.button_frame, 1, weight=1)
-        Grid.columnconfigure(self.torrent_lists_frame, 2, weight=1)
+        Grid.rowconfigure(root, 3, weight=1)
+    
+    def reset_progress(self):
+        time.sleep(1)
+        self.setprogress(0)
     
     # insert hot article lists
     def get_hot(self, board_name):
@@ -157,9 +161,8 @@ class Torrent():
                                                                         hot_list['bbs_name'], 
                                                                         hot_list['bbs_link']))
             self.setprogress(50 + index*50/10)
-        self.setprogress(100)    
-    def exit(self, event=0):
-        self.root.quit()
+        self.setprogress(100)
+        threading.Thread(target=self.reset_progress).start()
 
     def setprogress(self, progress):
         self.progressbar["value"] = progress
@@ -175,7 +178,8 @@ class Torrent():
         if len(search_text) > 1:
             threading.Thread(target=self.search_torrent_kim, args=(search_text,)).start()
         else:
-            self.notice_text.insert(0.0, "Please Insert a word or phrase.\n")
+            self.notice_text.insert(END, "Please Insert a word or phrase.\n")
+            self.notice_text.see("end")
         self.search_entry.delete(0, END)
 
     def search_torrent_kim(self, search_text):
@@ -218,8 +222,9 @@ class Torrent():
         torrent_bbs_lists_size = len(torrent_bbs_lists)
 
         if torrent_bbs_lists_size > 0:
-            self.notice_text.insert(0.0, "There are " + str(
+            self.notice_text.insert(END, "There are " + str(
                 torrent_bbs_lists_size) + " results related \"" + search_text + "\"\n")
+            self.notice_text.see("end")
 
             for index, torrent_bbs_list in enumerate(torrent_bbs_lists):
                 self.torrent_lists_tree.insert("", 'end',
@@ -233,9 +238,11 @@ class Torrent():
                 self.setprogress(50 + index*50/torrent_bbs_lists_size)
 
         else:
-            self.notice_text.insert(0.0, "There's no result for \"" + search_text + "\"\n")
+            self.notice_text.insert(END, "There's no result for \"" + search_text + "\"\n")
+            self.notice_text.see("end")
 
         self.setprogress(100)
+        threading.Thread(target=self.reset_progress).start()
 
     def asyncdownload(self, event):
         url = self.BASE_URL + self.torrent_lists_tree.focus()
@@ -276,12 +283,15 @@ class Torrent():
                             f.write(chunk)
                             f.flush()
 
-                self.notice_text.insert(0.0, "다운완료: " + torrent_name + "\n")
-
+                self.notice_text.insert(END, "다운완료: " + torrent_name + "\n")
+                self.notice_text.see("end")
+                
                 self.setprogress(100)
+                threading.Thread(target=self.reset_progress).start()
 
         except Exception as e:
-            self.notice_text.insert(INSERT, e)
+            self.notice_text.insert(END, e)
+            self.notice_text.see("end")
 
     def get_notice(self):
         url = "http://jinsyu.com/python/pyto/notice"
