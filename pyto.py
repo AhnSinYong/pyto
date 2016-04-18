@@ -53,7 +53,8 @@ class Torrent():
         self.notice_text.pack(side=LEFT, fill=BOTH, expand=1)
 
         # get notice text from jinsyu.com
-        self.notice_text.insert(INSERT, self.get_notice())
+        self.notice_text.insert(END, self.get_notice()+'\n')
+        self.notice_text.see("end")
 
         # button frame
         self.button_frame = Frame(self.root)
@@ -177,7 +178,8 @@ class Torrent():
         if len(search_text) > 1:
             threading.Thread(target=self.search_torrent_kim, args=(search_text,)).start()
         else:
-            self.notice_text.insert(0.0, "Please Insert a word or phrase.\n")
+            self.notice_text.insert(END, "Please Insert a word or phrase.\n")
+            self.notice_text.see("end")
         self.search_entry.delete(0, END)
 
     def search_torrent_kim(self, search_text):
@@ -220,8 +222,9 @@ class Torrent():
         torrent_bbs_lists_size = len(torrent_bbs_lists)
 
         if torrent_bbs_lists_size > 0:
-            self.notice_text.insert(0.0, "There are " + str(
+            self.notice_text.insert(END, "There are " + str(
                 torrent_bbs_lists_size) + " results related \"" + search_text + "\"\n")
+            self.notice_text.see("end")
 
             for index, torrent_bbs_list in enumerate(torrent_bbs_lists):
                 self.torrent_lists_tree.insert("", 'end',
@@ -235,7 +238,8 @@ class Torrent():
                 self.setprogress(50 + index*50/torrent_bbs_lists_size)
 
         else:
-            self.notice_text.insert(0.0, "There's no result for \"" + search_text + "\"\n")
+            self.notice_text.insert(END, "There's no result for \"" + search_text + "\"\n")
+            self.notice_text.see("end")
 
         self.setprogress(100)
         threading.Thread(target=self.reset_progress).start()
@@ -279,13 +283,15 @@ class Torrent():
                             f.write(chunk)
                             f.flush()
 
-                self.notice_text.insert(0.0, "다운완료: " + torrent_name + "\n")
-
+                self.notice_text.insert(END, "다운완료: " + torrent_name + "\n")
+                self.notice_text.see("end")
+                
                 self.setprogress(100)
                 threading.Thread(target=self.reset_progress).start()
 
         except Exception as e:
-            self.notice_text.insert(INSERT, e)
+            self.notice_text.insert(END, e)
+            self.notice_text.see("end")
 
     def get_notice(self):
         url = "http://jinsyu.com/python/pyto/notice"
