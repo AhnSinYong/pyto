@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from tkinter import *
 from tkinter.ttk import *
 import requests, threading, re, time
+import os.path
 
 DIC_CATEGORY = {
     "torrent_variety": "예능",
@@ -23,7 +24,6 @@ DIC_CATEGORY = {
     "torrent_etc": "기타",
     "torrent_book": "도서"}
 
-
 def souping(url, decode='utf-8'):
     user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) ' \
                  'Gecko/20071127 Firefox/2.0.0.11'
@@ -32,7 +32,6 @@ def souping(url, decode='utf-8'):
     html = resp.read()
     soup = BeautifulSoup(html.decode(decode, 'ignore'), 'html.parser')
     return soup
-
 
 class Torrent():
     BASE_URL = "https://torrentkim3.net"
@@ -71,11 +70,11 @@ class Torrent():
         self.search_entry.focus_set()
 
         # button frame / search button
-        self.search_button = Button(self.button_frame, text="Search torrent", command=self.search_torrent)
+        self.search_button = Button(self.button_frame, text="검색", command=self.search_torrent)
         self.search_button.pack(side=LEFT)
         
         # button frame / quit button
-        self.quit_button = Button(self.button_frame, text="Exit", command=root.destroy)
+        self.quit_button = Button(self.button_frame, text="종료", command=root.destroy)
         self.quit_button.pack(side=LEFT)
         root.bind('<Control-Key-x>', lambda e: root.destroy())
 
@@ -84,7 +83,7 @@ class Torrent():
         self.hot_button_frame.grid(row=2, sticky=W + E)
 
         # button frame / best 100 button
-        self.hot_label = Label(self.hot_button_frame, text="HOT10", width=6)
+        self.hot_label = Label(self.hot_button_frame, text="베스트10", width=6)
         self.hot_label.pack(side=LEFT, padx=(5,0))
         self.hot_movie_button = Button(self.hot_button_frame, text="인기영화", command=lambda: self.get_hot('torrent_movie'))
         self.hot_movie_button.pack(side=LEFT, fill=X, expand=1)
@@ -178,7 +177,7 @@ class Torrent():
         if len(search_text) > 1:
             threading.Thread(target=self.search_torrent_kim, args=(search_text,)).start()
         else:
-            self.notice_text.insert(END, "Please Insert a word or phrase.\n")
+            self.notice_text.insert(END, "한 자 이상의 검색어를 입력하세요.\n")
             self.notice_text.see("end")
         self.search_entry.delete(0, END)
 
@@ -222,8 +221,8 @@ class Torrent():
         torrent_bbs_lists_size = len(torrent_bbs_lists)
 
         if torrent_bbs_lists_size > 0:
-            self.notice_text.insert(END, "There are " + str(
-                torrent_bbs_lists_size) + " results related \"" + search_text + "\"\n")
+            self.notice_text.insert(END, "\"" + search_text + "\" 검색 결과 총 " + str(
+                torrent_bbs_lists_size) + " 개의 토렌트가 검색되었습니다.\n")
             self.notice_text.see("end")
 
             for index, torrent_bbs_list in enumerate(torrent_bbs_lists):
@@ -249,48 +248,69 @@ class Torrent():
         threading.Thread(target=self.down_torrent_kim, args=(url,)).start()
 
     def down_torrent_kim(self, url):
-        self.setprogress(0)
-
-        soup = souping(url)
-
-        self.setprogress(10)
-
         try:
-            for post in soup.findAll('span', {'style': 'color:#888;'}):
-                torrent_name = post.contents[0]
-                torrent_link = self.BASE_URL + post.parent.get('href')
+            self.setprogress(0)
 
-                if 'torrent' in torrent_name[-10:]:
-                    torrent_name = torrent_name[:-2]
+            soup = souping(url)
 
-                elif 'smi' in torrent_name[-15:]:
-                    torrent_name = re.sub(r'\(\d+\.\dK\)', '', torrent_name).rstrip()
-                    torrent_link = self.BASE_URL + re.search(r'\'(/bbs.+?)\'', torrent_link).group(1)
+            if len(soup) > 50:
+                self.setprogress(10)
+                   
 
-                elif 'srt' in torrent_name[-15:]:
-                    torrent_name = re.sub(r'\(\d+\.\dK\)', '', torrent_name).rstrip()
-                    torrent_link = self.BASE_URL + re.search(r'\'(/bbs.+?)\'', torrent_link).group(1)
+                for post in soup.findAll('span', {'style': 'color:#888;'}):
 
-                r = requests.get(torrent_link, stream=True, headers={'referer': url})
+                    torrent_name = post.contents[0]
+                    torrent_link = self.BASE_URL + post.parent.get('href')
 
-                size = float(r.headers['content-length']) / 1024.0
+                    if 'torrent' in torrent_name[-10:]:
+                        torrent_name = torrent_name[:-2]
 
-                with open(torrent_name, 'wb') as f:
-                    chunks = enumerate(r.iter_content(chunk_size=1024))
-                    for index, chunk in chunks:
-                        if chunk:
-                            self.setprogress(10.0 + index*90.0/size)
-                            f.write(chunk)
-                            f.flush()
+                    elif 'smi' in torrent_name[-15:]:
+                        torrent_name = re.sub(r'\(\d+\.\dK\)', '', torrent_name).rstrip()
+                        torrent_link = self.BASE_URL + re.search(r'\'(/bbs.+?)\'', torrent_link).group(1)
 
-                self.notice_text.insert(END, "다운완료: " + torrent_name + "\n")
+                    elif 'srt' in torrent_name[-15:]:
+                        torrent_name = re.sub(r'\(\d+\.\dK\)', '', torrent_name).rstrip()
+                        torrent_link = self.BASE_URL + re.search(r'\'(/bbs.+?)\'', torrent_link).group(1)
+
+                    else:
+                        self.setprogress(0)
+                        self.notice_text.insert(END, "토렌트 링크가 존재하지 않습니다.\n")
+                        self.notice_text.see("end")
+                        return
+
+                    # 특수문자 포함시 오류가 나서 파일 이름에서 제거함
+                    torrent_name = torrent_name.replace("'", "")
+                    torrent_name = torrent_name.replace("\\", "")
+
+                    r = requests.get(torrent_link, stream=True, headers={'referer': url})
+
+
+                    size = float(r.headers['content-length']) / 1024.0
+
+                    with open(torrent_name, 'wb') as f:
+                        chunks = enumerate(r.iter_content(chunk_size=1024))
+                        for index, chunk in chunks:
+                            if chunk:
+                                self.setprogress(10.0 + index*90.0/size)
+                                f.write(chunk)
+                                f.flush()
+
+                    is_file = os.path.exists(torrent_name)
+
+                    self.notice_text.insert(END, "다운완료: " + torrent_name + "\n")
+                    self.notice_text.see("end")
+                    
+                    self.setprogress(100)
+                    threading.Thread(target=self.reset_progress).start()
+            
+            else:
+                self.setprogress(0)
+                self.notice_text.insert(END, "삭제된 자료거나, 올바르지 않은 링크입니다. 다른 자료를 이용하세요.\n")
                 self.notice_text.see("end")
-                
-                self.setprogress(100)
-                threading.Thread(target=self.reset_progress).start()
 
         except Exception as e:
-            self.notice_text.insert(END, e + "\n")
+            self.notice_text.insert(END, "다운로드 과정에 오류가 발생했습니다 (error: " + str(e) + "). 관리자에게 문의하세요.\n")
             self.notice_text.see("end")
 
     def get_notice(self):
@@ -300,7 +320,7 @@ class Torrent():
 
 if __name__ == "__main__":
     root = Tk()
-    root.title('Pyto V1.0')
+    root.title('Pyto V1.1')
     root.geometry('650x600+200+100')
     # root.resizable(width=FALSE, height=FALSE)
     torrent = Torrent(root)
