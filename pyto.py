@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 from tkinter import *
 from tkinter.ttk import *
 import requests, threading, re, time
-import os.path
 
 DIC_CATEGORY = {
     "torrent_variety": "예능",
