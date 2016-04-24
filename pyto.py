@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from tkinter import *
 from tkinter.ttk import *
 import requests, threading, re, time
+import os.path
 
 DIC_CATEGORY = {
     "torrent_variety": "예능",
@@ -191,13 +192,28 @@ class Torrent():
 
         torrent_bbs_lists = []
         for li in soup.findAll('tr', {'class': 'bg1'}):
-            bbs_recommendation = li.findAll('td')[1].get_text().strip()
+
+            # 추천갯수 조회
+            bbs_recommendation = li.findAll('td')
+            bbs_recommendation = bbs_recommendation[1].get_text().strip() if bbs_recommendation else 0
+
+            # 검색결과가 링크가 유효한지 검사
             bbs_link_raw = li.find('td', {'class': 'subject'})
-            bbs_link = bbs_link_raw.findAll('a')[1].get('href')
-            bbs_link = bbs_link.split('/')
-            bbs_category = bbs_link[1]
-            bbs_detail_link = bbs_link[2]
-            bbs_name = bbs_link_raw.findAll('a')[1].get_text().strip()
+            bbs_link = bbs_link_raw.findAll('a')
+            if len(bbs_link) > 1:
+                bbs_link = bbs_link[1].get('href') 
+            else:
+                continue
+
+            # 카테고리
+            bbs_category = bbs_link.split('/')[1]
+
+            # BASE_URL 제외한 링크
+            bbs_detail_link = bbs_link.split('/')[2]
+
+            # 게시글 제목 조회
+            bbs_name = bbs_link_raw.findAll('a')
+            bbs_name = bbs_name[1].get_text().strip() if bbs_name else None
 
             if bbs_category in DIC_CATEGORY:
                 bbs_category_korean = DIC_CATEGORY.get(bbs_category)
